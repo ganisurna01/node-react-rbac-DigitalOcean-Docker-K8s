@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: node-react-rbac
+  labels:
+    name: node-react-rbac
+

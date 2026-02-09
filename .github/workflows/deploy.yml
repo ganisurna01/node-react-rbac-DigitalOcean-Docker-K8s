@@ -1,0 +1,145 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io  # Change to docker.io for Docker Hub, or your registry
+  IMAGE_PREFIX: ${{ github.repository_owner }}/node-react-rbac  # For ghcr.io
+  # For Docker Hub, use: IMAGE_PREFIX: your-dockerhub-username/node-react-rbac
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # Required for GitHub Container Registry
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        # For Docker Hub, use:
+        # username: ${{ secrets.DOCKER_USERNAME }}
+        # password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata for server
+        id: meta-server
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-server
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push server image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: true
+          tags: ${{ steps.meta-server.outputs.tags }}
+          labels: ${{ steps.meta-server.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata for client
+        id: meta-client
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-client
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push client image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          push: true
+          tags: ${{ steps.meta-client.outputs.tags }}
+          labels: ${{ steps.meta-client.outputs.labels }}
+          build-args: |
+            REACT_APP_API_URL=/api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
+        # Alternative methods:
+        # method: service-account
+        # k8s-url: ${{ secrets.KUBE_SERVER }}
+        # k8s-secret: ${{ secrets.KUBE_TOKEN }}
+
+      - name: Update deployment images
+        run: |
+          # Update server image
+          SERVER_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-server:latest"
+          sed -i "s|image:.*node-react-rbac-server.*|image: ${SERVER_IMAGE}|g" k8s/server-deployment.yaml
+          
+          # Update client image
+          CLIENT_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-client:latest"
+          sed -i "s|image:.*node-react-rbac-client.*|image: ${CLIENT_IMAGE}|g" k8s/client-deployment.yaml
+          
+          echo "Updated server image to: ${SERVER_IMAGE}"
+          echo "Updated client image to: ${CLIENT_IMAGE}"
+
+      - name: Create namespace if not exists
+        run: kubectl create namespace node-react-rbac --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create/Update ConfigMap
+        run: kubectl apply -f k8s/configmap.yaml
+
+      - name: Create/Update Secret
+        run: |
+          kubectl create secret generic app-secrets \
+            --namespace=node-react-rbac \
+            --from-literal=MONGODB_URI='${{ secrets.MONGODB_URI }}' \
+            --from-literal=JWT_SECRET='${{ secrets.JWT_SECRET }}' \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/server-deployment.yaml
+          kubectl apply -f k8s/client-deployment.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/server -n node-react-rbac --timeout=5m
+          kubectl rollout status deployment/client -n node-react-rbac --timeout=5m
+
+      - name: Verify deployment
+        run: |
+          echo "=== Deployment Status ==="
+          kubectl get all -n node-react-rbac
+          echo ""
+          echo "=== Ingress ==="
+          kubectl get ingress -n node-react-rbac
+          echo ""
+          echo "=== Pods ==="
+          kubectl get pods -n node-react-rbac

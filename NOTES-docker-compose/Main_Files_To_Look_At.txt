@@ -1,0 +1,10 @@
+1. Dockerfile (server), 02_CLIENT_DOCKERFILE.md
+2. Dockerfile (client), 03_SERVER_DOCKERFILE.md
+3. nginx.conf (client)
+4. docker-compose.yml (root folder)
+5. .github/workflows/deploy.yml (root folder)
+6. 08_AUTOMATED_DEPLOYMENT.md (NOTES)
+7. deploy.sh, 07_MANUAL_DEPLOYMENT.md
+
+8. Below is the Remote Repo - (You can see Github Actions)
+    https://github.com/Ganesh-Surna-RGUKT/node-react-rbac/actions

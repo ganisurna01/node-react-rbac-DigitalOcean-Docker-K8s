@@ -1,0 +1,232 @@
+.page-container {
+  min-height: calc(100vh - 80px);
+  padding: 40px 20px;
+  color: white;
+}
+
+.page-content {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.page-content h1 {
+  font-size: 36px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.page-description {
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 20px;
+  opacity: 0.9;
+}
+
+.current-role {
+  text-align: center;
+  font-size: 16px;
+  margin-bottom: 30px;
+  opacity: 0.8;
+}
+
+.welcome-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 30px;
+  margin: 30px 0;
+  text-align: center;
+  color: #333;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-text {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.role-info {
+  margin: 20px 0;
+}
+
+.role-badge-large {
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: white;
+  display: inline-block;
+}
+
+.info-text {
+  color: #666;
+  margin-top: 15px;
+}
+
+.action-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 30px;
+  margin: 30px 0;
+  color: #333;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.btn-fetch {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 20px;
+}
+
+.btn-fetch:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-fetch:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.response-box {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.response-box h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.response-box pre {
+  margin: 0;
+  font-size: 12px;
+  color: #333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.error-box {
+  background: #fee;
+  color: #c33;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+  border: 1px solid #fcc;
+}
+
+.info-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 25px;
+  margin: 30px 0;
+  color: #333;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.info-section h2,
+.info-section h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.info-section p {
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.info-section code {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  color: #667eea;
+}
+
+.page-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+
+.page-list li {
+  padding: 10px;
+  margin: 8px 0;
+  background: #f8f9fa;
+  border-radius: 6px;
+  color: #333;
+}
+
+.unauthorized-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  padding: 40px;
+  margin: 30px 0;
+  text-align: center;
+  color: #333;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.unauthorized-card h1 {
+  color: #e74c3c;
+  margin-bottom: 20px;
+}
+
+.error-message-large {
+  font-size: 20px;
+  color: #e74c3c;
+  margin: 20px 0;
+  font-weight: 600;
+}
+
+.role-info-text {
+  font-size: 16px;
+  margin: 15px 0;
+  color: #666;
+}
+
+.btn-primary {
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 20px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+@media (max-width: 768px) {
+  .page-content h1 {
+    font-size: 28px;
+  }
+  
+  .welcome-card,
+  .action-card,
+  .info-section {
+    padding: 20px;
+  }
+}
+
