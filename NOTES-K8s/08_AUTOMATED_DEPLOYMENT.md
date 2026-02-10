@@ -96,6 +96,7 @@ This means your DigitalOcean API token doesn't have the required permissions. He
    - Or manually select: **Read** + **Write** for Kubernetes
    - Click **Generate Token**
    - **Copy the token immediately** (you won't see it again!)
+   - E.g Access Token: **See in .env - Added there because of GitHub Repo Violations Error**
 
 4. **Update doctl Authentication:**
    
