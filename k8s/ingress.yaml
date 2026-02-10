@@ -9,7 +9,7 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   rules:
-  - host: nodereactrback8s.com  # Change this to your actual domain or use IP
+  - host: nodereactrback8s.com  # Add this in hosts at the end(`C:\Windows\System32\drivers\etc\hosts` --> 127.0.0.1 www.nodereactrback8s.com)
     http:
       paths:
       - path: /api

@@ -25,20 +25,100 @@ You need to get your kubeconfig file to allow GitHub Actions to access your clus
 # Or use WSL/Linux:
 
 # Download doctl
-wget https://github.com/digitalocean/doctl/releases/download/v1.104.0/doctl-1.104.0-linux-amd64.tar.gz
-tar xf doctl-1.104.0-linux-amd64.tar.gz
+wget https://github.com/digitalocean/doctl/releases/download/v1.104.0/doctl-1.150.0-linux-amd64.tar.gz
+tar xf doctl-1.150.0-linux-amd64.tar.gz
 sudo mv doctl /usr/local/bin
 
 # Authenticate
 doctl auth init
 # Enter your DigitalOcean API token when prompted
 
-# List clusters
+# Create a Kubernetes cluster (if you don't have one)
+# Replace CLUSTER_NAME with your desired name (e.g., "node-react-rbac-cluster")
+# Replace REGION with your preferred region (e.g., "nyc1", "sfo3", "sgp1")
+# Replace NODE_SIZE with node size (e.g., "s-2vcpu-4gb" for 2 vCPU, 4GB RAM)
+doctl kubernetes cluster create CLUSTER_NAME \
+  --region REGION \
+  --version latest \
+  --node-pool "name=worker-pool;size=NODE_SIZE;count=2" \
+  --wait
+
+# Example:
+# doctl kubernetes cluster create node-react-rbac-cluster \
+#   --region nyc1 \
+#   --version latest \
+#   --node-pool "name=worker-pool;size=s-2vcpu-4gb;count=2" \
+#   --wait
+
+# List clusters (to verify and see your cluster name)
 doctl kubernetes cluster list
 
 # Get kubeconfig for your cluster
-doctl kubernetes cluster kubeconfig save YOUR_CLUSTER_NAME
+# Replace CLUSTER_NAME with the actual name from the list above
+doctl kubernetes cluster kubeconfig save CLUSTER_NAME
 ```
+
+**⚠️ Troubleshooting: 403 Error When Fetching Kubeconfig**
+
+If you see an error like:
+```
+Warning: Couldn't get credentials for cluster. It will not be added to your kubeconfig: 
+GET https://api.digitalocean.com/v2/kubernetes/clusters/.../kubeconfig: 403 
+You are not authorized to perform this operation
+```
+
+This means your DigitalOcean API token doesn't have the required permissions. Here's how to fix it:
+
+1. **Go to DigitalOcean API Tokens:**
+   - Visit: https://cloud.digitalocean.com/account/api/tokens
+   - Or: DigitalOcean Dashboard → API → Tokens/Keys
+
+2. **Check Current Token Permissions:**
+   - Your token needs **Read** and **Write** permissions for Kubernetes
+
+3. **Regenerate Token with Proper Permissions:**
+   - Click **Generate New Token**
+   - Name it (e.g., "Kubernetes Access Token")
+   - Select **Write** scope (includes Read automatically)
+   - Or manually select: **Read** + **Write** for Kubernetes
+   - Click **Generate Token**
+   - **Copy the token immediately** (you won't see it again!)
+
+4. **Update doctl Authentication:**
+   
+   **Important:** You must remove all existing authentication contexts before re-authenticating, otherwise you'll get a token validation error.
+   
+   ```bash
+   # List existing contexts
+   doctl auth list
+   
+   # Remove all existing contexts (including default)
+   # Remove any custom contexts first
+   doctl auth remove --context rbac-k8s  # or whatever custom context name you have
+   
+   # Remove the default context (IMPORTANT - required to avoid validation errors)
+   doctl auth remove --context default
+   
+   # Now re-authenticate with the new token
+   doctl auth init
+   # Paste the new token when prompted
+   ```
+   
+   **Why remove default context?** If you don't remove the default context, `doctl auth init` will fail with a token validation error. Removing all contexts ensures a clean authentication setup.
+
+5. **Retry Getting Kubeconfig:**
+   ```bash
+   # Try again to get kubeconfig
+   doctl kubernetes cluster kubeconfig save CLUSTER_NAME
+   ```
+
+6. **Verify Access:**
+   ```bash
+   # Test kubectl connection
+   kubectl cluster-info
+   ```
+
+**Note:** The cluster was created successfully, but you just need proper token permissions to access its credentials.
 
 #### For Other Cloud Providers:
 
@@ -460,6 +540,35 @@ kubectl logs -f deployment/client -n node-react-rbac
 ```
 
 ## Troubleshooting Automated Deployment
+
+### Cluster Creation: 403 Error When Fetching Kubeconfig (DigitalOcean)
+
+**Problem:** Cluster created successfully but getting 403 error when fetching kubeconfig:
+```
+Warning: Couldn't get credentials for cluster... 403 You are not authorized to perform this operation
+```
+
+**Cause:** DigitalOcean API token doesn't have Read/Write permissions for Kubernetes.
+
+**Solutions:**
+1. Go to https://cloud.digitalocean.com/account/api/tokens
+2. Generate a new token with **Write** scope (includes Read)
+3. **Remove all existing authentication contexts** (IMPORTANT - prevents token validation errors):
+   ```bash
+   # List contexts
+   doctl auth list
+   
+   # Remove all contexts (including default)
+   doctl auth remove --context rbac-k8s  # or any custom context
+   doctl auth remove --context default   # MUST remove default too!
+   ```
+4. Re-authenticate: `doctl auth init` (paste new token)
+5. Retry: `doctl kubernetes cluster kubeconfig save CLUSTER_NAME`
+6. Verify: `kubectl cluster-info`
+
+**Important:** If you don't remove the `default` context before running `doctl auth init`, you'll get a token validation error. Always remove all contexts first for a clean authentication setup.
+
+**Note:** The cluster is running fine, you just need proper token permissions to access it.
 
 ### Workflow Fails: kubectl Authentication Failed
 
