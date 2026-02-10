@@ -344,11 +344,18 @@ The workflow automatically updates image names, but you can set default values:
 3. You have **two options**:
    - **Option A (recommended): Use a domain/hostname**
      - Set `host: nodereactrback8s.com` (or your own domain) in `k8s/ingress.yaml`
-     - Point that domain to the ingress IP in your hosts file or DNS, for example:
-       - `165.245.144.226 nodereactrback8s.com`
+       - **Important:** The `host:` field must contain **only the domain name** (e.g., `nodereactrback8s.com`)
+       - **Do NOT** include `http://`, `https://`, or IP addresses in the `host:` field
+       - **Do NOT** use: `host: http://165.245.144.226` ❌ (This will cause validation errors)
+       - **Use:** `host: nodereactrback8s.com` ✅
+     - Point that domain to the ingress IP in your hosts file or DNS:
+       - **Windows hosts file:** `C:\Windows\System32\drivers\etc\hosts` → Add: `165.245.144.226 nodereactrback8s.com`
+       - **Linux/Mac hosts file:** `/etc/hosts` → Add: `165.245.144.226 nodereactrback8s.com`
+       - **DNS:** Point your domain's A record to the ingress IP
    - **Option B: No host (IP-only testing)**
      - Remove the `host:` line from the ingress rule so it matches any Host header.
      - Then you can access the app directly via `http://<INGRESS_IP>` without setting up a hostname.
+     - **Note:** This is less secure and not recommended for production.
 
 ## Step 6: Initial Manual Deployment (Optional)
 
@@ -703,6 +710,37 @@ It looks like you are trying to use a client-go credential plugin that is not in
 - Verify DNS points to ingress IP (if using domain)
 - Check service endpoints: `kubectl get endpoints -n node-react-rbac`
 - Test service directly: `kubectl port-forward svc/server-service 5000:5000 -n node-react-rbac`
+
+### Ingress Validation Error: Invalid host value
+
+**Problem:** Getting error when applying ingress:
+```
+The Ingress "app-ingress" is invalid: spec.rules[0].host: Invalid value: "http://165.245.144.226": 
+a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', 
+and must start and end with an alphanumeric character
+```
+
+**Cause:** The `host:` field in `k8s/ingress.yaml` contains an invalid value. Common mistakes:
+- Including `http://` or `https://` in the host field
+- Using an IP address instead of a domain name
+- Using uppercase letters or special characters
+
+**Solution:**
+1. Open `k8s/ingress.yaml`
+2. Find the `host:` field under `spec.rules[0]`
+3. Ensure it contains **only a valid domain name**, for example:
+   ```yaml
+   - host: nodereactrback8s.com  # ✅ Correct
+   ```
+4. **Do NOT** use:
+   ```yaml
+   - host: http://165.245.144.226  # ❌ Wrong - contains http://
+   - host: 165.245.144.226         # ❌ Wrong - IP address not allowed
+   - host: http://nodereactrback8s.com  # ❌ Wrong - contains http://
+   ```
+5. To map the domain to the IP address, use your **hosts file** (not the ingress YAML):
+   - Windows: `C:\Windows\System32\drivers\etc\hosts` → Add: `165.245.144.226 nodereactrback8s.com`
+   - Linux/Mac: `/etc/hosts` → Add: `165.245.144.226 nodereactrback8s.com`
 
 ### Getting 404 Not Found When Accessing by IP Address
 
