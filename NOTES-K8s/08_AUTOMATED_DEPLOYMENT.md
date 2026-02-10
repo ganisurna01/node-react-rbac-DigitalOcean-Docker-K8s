@@ -21,17 +21,30 @@ You need to get your kubeconfig file to allow GitHub Actions to access your clus
 
 ```bash
 # Install doctl (DigitalOcean CLI)
-# On Windows: Download from https://github.com/digitalocean/doctl/releases
-# Or use WSL/Linux:
+# Official docs: https://docs.digitalocean.com/reference/doctl/how-to/install/
 
-# Download doctl
-wget https://github.com/digitalocean/doctl/releases/download/v1.104.0/doctl-1.150.0-linux-amd64.tar.gz
-tar xf doctl-1.150.0-linux-amd64.tar.gz
-sudo mv doctl /usr/local/bin
+# On Windows (native): Download the latest release from GitHub
+# On WSL (Linux), you can use the following commands:
 
-# Authenticate
-doctl auth init
-# Enter your DigitalOcean API token when prompted
+cd ~
+wget https://github.com/digitalocean/doctl/releases/download/v1.146.0/doctl-1.146.0-linux-amd64.tar.gz
+tar xf ~/doctl-1.146.0-linux-amd64.tar.gz
+sudo mv ~/doctl /usr/local/bin
+
+# Step 3: Use the API token to grant account access to doctl
+# (Create a Personal Access Token in the DigitalOcean control panel,
+# then enter it when prompted.)
+doctl auth init --context rbac-k8s
+
+# List and switch authentication contexts
+doctl auth list
+doctl auth switch --context rbac-k8s
+
+# Step 4: Validate that doctl is working
+doctl account get
+
+# Step 5 (Optional): Install Serverless Functions support
+doctl serverless install
 
 # Create a Kubernetes cluster (if you don't have one)
 # Replace CLUSTER_NAME with your desired name (e.g., "node-react-rbac-cluster")
