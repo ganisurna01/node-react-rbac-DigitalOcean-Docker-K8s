@@ -200,7 +200,7 @@ Get-Content $env:USERPROFILE\.kube\config
 - Cluster server URL
 - User credentials (token or certificate)
 
-### 2.2 Encode Kubeconfig to Base64 (Optional but Recommended)
+### 2.2 (Advanced) Encode Kubeconfig to Base64 (Optional)
 
 ```bash
 # On Linux/WSL:
@@ -212,7 +212,10 @@ cat ~/.kube/config | base64 -w 0
 # Copy the base64 encoded string
 ```
 
-**Why Base64?** Makes it easier to paste into GitHub Secrets without formatting issues.
+**Why Base64?** It can make it easier to paste into GitHub Secrets without formatting issues.
+
+However, the **default GitHub Actions workflow in this project expects the raw kubeconfig YAML** (not base64) in the `KUBE_CONFIG` secret.  
+Only use the base64 approach if you **also add a custom decode step** in the workflow (see the commented example in `.github/workflows/deploy.yml`).
 
 ## Step 3: Set Up Container Registry
 
@@ -251,13 +254,12 @@ Update the workflow file to use your registry URL and authentication method.
 
 1. **Name:** `KUBE_CONFIG`
 2. **Value:** 
-   - **Option A:** Paste the entire kubeconfig file content (if not base64 encoded)
-   - **Option B:** Paste the base64 encoded kubeconfig (if you encoded it)
+   - **Recommended (default in this repo):** Paste the entire **raw kubeconfig file content** (YAML that starts with `apiVersion: ...`).
+   - **Advanced:** If you decide to store a **base64-encoded** kubeconfig, you **must** add a decode step in the workflow (see the commented `KUBE_CONFIG_BASE64` example in `.github/workflows/deploy.yml`). The default workflow does **not** automatically decode base64.
 3. Click **Add secret**
 
 **Important:**
-- Include the ENTIRE kubeconfig file content
-- If using base64, the workflow will decode it automatically
+- Include the **ENTIRE** kubeconfig file content
 - Never commit kubeconfig to the repository
 
 #### Secret 2: MONGODB_URI
@@ -275,7 +277,17 @@ Update the workflow file to use your registry URL and authentication method.
 2. **Value:** Your JWT secret key (any secure random string)
 3. Click **Add secret**
 
-#### Secret 4: Docker Hub Credentials (Only if using Docker Hub)
+#### Secret 4: DIGITALOCEAN_ACCESS_TOKEN (Required for DigitalOcean Kubernetes)
+
+This is used by `doctl` in the GitHub Actions workflow so that the DigitalOcean exec credential plugin in your kubeconfig can fetch Kubernetes credentials.
+
+1. **Name:** `DIGITALOCEAN_ACCESS_TOKEN`
+2. **Value:** A DigitalOcean Personal Access Token with permissions for Kubernetes (typically a **Write**-scope token).
+3. Click **Add secret**
+
+> If you are **not** using DigitalOcean Kubernetes and your kubeconfig does **not** rely on `doctl` as an exec plugin, you can skip this secret.
+
+#### Secret 5: Docker Hub Credentials (Only if using Docker Hub)
 
 If you're using Docker Hub instead of ghcr.io:
 
@@ -293,6 +305,7 @@ You should have these secrets:
 - ✅ `KUBE_CONFIG` - Kubernetes cluster access
 - ✅ `MONGODB_URI` - Database connection
 - ✅ `JWT_SECRET` - JWT signing key
+- ✅ `DIGITALOCEAN_ACCESS_TOKEN` (required for DigitalOcean Kubernetes with `doctl`-based kubeconfig)
 - ✅ `DOCKER_USERNAME` (optional) - Only if using Docker Hub
 - ✅ `DOCKER_PASSWORD` (optional) - Only if using Docker Hub
 
@@ -593,7 +606,31 @@ Warning: Couldn't get credentials for cluster... 403 You are not authorized to p
 - Verify kubeconfig is valid: `kubectl cluster-info` (on your local machine)
 - Check cluster is accessible from internet (for cloud providers)
 - Verify cluster credentials haven't expired
-- For base64 encoded: Ensure it's properly encoded
+- If you customized the workflow to use a **base64-encoded** kubeconfig, make sure you are **decoding it into a file and pointing `KUBECONFIG` to that file** before running `kubectl`.
+
+### Workflow Fails: executable doctl not found (DigitalOcean)
+
+**Problem:** kubectl fails with an error similar to:
+
+```text
+failed to download openapi: Get "https://<cluster-id>.k8s.ondigitalocean.com/openapi/v2?timeout=32s":
+getting credentials: *** executable doctl not found
+It looks like you are trying to use a client-go credential plugin that is not installed.
+```
+
+**Cause:** Your DigitalOcean kubeconfig uses an `exec` credential plugin that runs `doctl` to obtain tokens, but `doctl` is **not installed or not authenticated** in the GitHub Actions runner.
+
+**Fix (already wired into this repo’s workflow):**
+
+1. Make sure `.github/workflows/deploy.yml` contains the `doctl` install step:
+   ```yaml
+   - name: Install doctl
+     uses: digitalocean/action-doctl@v2
+     with:
+       token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+   ```
+2. Create the `DIGITALOCEAN_ACCESS_TOKEN` secret in GitHub (Step 4 above) using a DO Personal Access Token with Kubernetes access.
+3. Re-run the workflow. The `doctl` binary will be available, and the kubeconfig exec plugin can fetch credentials successfully.
 
 ### Workflow Fails: Image Build Failed
 
