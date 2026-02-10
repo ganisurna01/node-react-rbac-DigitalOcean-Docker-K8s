@@ -90,6 +90,23 @@ jobs:
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
+        # NOTE:
+        # - The 'kubeconfig' input above must be the RAW kubeconfig YAML content.
+        # - Do NOT store it base64-encoded in 'KUBE_CONFIG', otherwise kubectl will fail
+        #   with errors like "cannot unmarshal string into Go value of type struct { APIVersion string; Kind string }".
+        #
+        # Alternative approach (for future reference) if you prefer to store kubeconfig as base64:
+        #
+        # - Create a separate secret, e.g. KUBE_CONFIG_BASE64, that contains:
+        #     cat ~/.kube/config | base64 -w0
+        # - Then decode it in a separate step and export KUBECONFIG:
+        #
+        # - name: Write kubeconfig from base64
+        #   run: |
+        #     echo "${KUBE_CONFIG_BASE64}" | base64 -d > "$HOME/kubeconfig"
+        #     echo "KUBECONFIG=$HOME/kubeconfig" >> "$GITHUB_ENV"
+        #   env:
+        #     KUBE_CONFIG_BASE64: ${{ secrets.KUBE_CONFIG_BASE64 }}
         # Alternative methods:
         # method: service-account
         # k8s-url: ${{ secrets.KUBE_SERVER }}
