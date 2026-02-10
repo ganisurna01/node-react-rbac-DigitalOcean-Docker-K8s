@@ -341,7 +341,14 @@ The workflow automatically updates image names, but you can set default values:
 
 1. Open `k8s/ingress.yaml`
 2. Find the `host:` field
-3. Update to your domain name, or remove the host field to use IP
+3. You have **two options**:
+   - **Option A (recommended): Use a domain/hostname**
+     - Set `host: nodereactrback8s.com` (or your own domain) in `k8s/ingress.yaml`
+     - Point that domain to the ingress IP in your hosts file or DNS, for example:
+       - `165.245.144.226 nodereactrback8s.com`
+   - **Option B: No host (IP-only testing)**
+     - Remove the `host:` line from the ingress rule so it matches any Host header.
+     - Then you can access the app directly via `http://<INGRESS_IP>` without setting up a hostname.
 
 ## Step 6: Initial Manual Deployment (Optional)
 
@@ -456,12 +463,14 @@ kubectl get pods -n node-react-rbac
 # Get ingress IP
 kubectl get ingress -n node-react-rbac
 
-# Test API
-curl http://<INGRESS_IP>/api/health
+# Test API (use Host header or domain name)
+curl -H "Host: nodereactrback8s.com" http://<INGRESS_IP>/api/health
+# Or update hosts file and use: curl http://nodereactrback8s.com/api/health
 # Should return: {"message":"Server is running!"}
 
 # Access frontend
-# Open browser: http://<INGRESS_IP>
+# Update hosts file first, then open browser: http://nodereactrback8s.com
+# Note: Direct IP access will return 404 because ingress requires the host name
 ```
 
 ## How Automated Deployment Works
@@ -544,16 +553,20 @@ kubectl get ingress -n node-react-rbac
 ### 8.4 Test Application
 
 ```bash
-# Test API health endpoint
-curl http://<INGRESS_IP>/api/health
-# Or if using domain:
+# Option 1: Test using domain (after updating hosts file)
 curl http://nodereactrback8s.com/api/health
-
 # Should return: {"message":"Server is running!"}
 
+# Option 2: Test using IP with Host header
+curl -H "Host: nodereactrback8s.com" http://<INGRESS_IP>/api/health
+# Should return: {"message":"Server is running!"}
+
+# Note: Direct IP access without Host header will return 404 Not Found
+# because the ingress rule requires the specific host name
+
 # Access frontend in browser
-# http://<INGRESS_IP>
-# Or: http://nodereactrback8s.com
+# http://nodereactrback8s.com (after updating hosts file)
+# Or use Host header with IP: Not possible in browser, use domain instead
 ```
 
 ### 8.5 Check Logs
@@ -690,6 +703,51 @@ It looks like you are trying to use a client-go credential plugin that is not in
 - Verify DNS points to ingress IP (if using domain)
 - Check service endpoints: `kubectl get endpoints -n node-react-rbac`
 - Test service directly: `kubectl port-forward svc/server-service 5000:5000 -n node-react-rbac`
+
+### Getting 404 Not Found When Accessing by IP Address
+
+**Problem:** Accessing `http://<INGRESS_IP>/api/health` returns `404 Not Found` from nginx, even though pods are running
+
+**Cause:** The ingress rule is configured with a specific host (`nodereactrback8s.com`). When you access the IP directly, the `Host` header doesn't match the ingress rule, so nginx ingress returns its default 404 page.
+
+**Solutions:**
+
+**Option 1: Use the domain name (Recommended)**
+1. Get your ingress IP:
+   ```bash
+   kubectl get ingress -n node-react-rbac
+   ```
+2. Update your hosts file to point the domain to the ingress IP:
+   - **Windows:** Edit `C:\Windows\System32\drivers\etc\hosts` (as Administrator)
+   - **Linux/Mac:** Edit `/etc/hosts` (with sudo)
+   - Add/update this line:
+     ```
+     165.245.144.226 nodereactrback8s.com
+     ```
+     (Replace `165.245.144.226` with your actual ingress IP)
+3. Access via domain:
+   - Browser: `http://nodereactrback8s.com`
+   - API: `http://nodereactrback8s.com/api/health`
+
+**Option 2: Use Host header with curl**
+When testing with curl, include the Host header:
+```bash
+curl -H "Host: nodereactrback8s.com" http://165.245.144.226/api/health
+curl -H "Host: nodereactrback8s.com" http://165.245.144.226/
+```
+
+**Option 3: Remove host requirement from ingress (Not recommended for production)**
+If you want to access by IP without a domain, modify `k8s/ingress.yaml` to remove the `host` field:
+```yaml
+spec:
+  rules:
+  - http:  # Remove the 'host:' line
+      paths:
+      - path: /api
+        ...
+```
+
+**Note:** If your hosts file has `127.0.0.1 nodereactrback8s.com`, you'll get `ERR_CONNECTION_REFUSED` because it's trying to connect to localhost instead of your cluster. Always use the ingress IP address in the hosts file.
 
 ### ImagePullBackOff Error
 
