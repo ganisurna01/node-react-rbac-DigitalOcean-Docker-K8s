@@ -5,8 +5,14 @@ metadata:
   namespace: node-react-rbac
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # NOTE: We do NOT use rewrite-target(nginx.ingress.kubernetes.io/rewrite-target: /) here because:
+    # - Server routes are mounted at /api/auth (e.g., /api/auth/login, /api/auth/register)
+    # - Without rewrite-target, requests to /api/auth/login are forwarded as-is to the server
+    # - If we used rewrite-target: /, it would strip /api and forward /auth/login instead
+    # - This would cause 404 errors since server expects /api/auth/login, not /auth/login
+    # - Example: Client -> /api/auth/login -> Ingress forwards /api/auth/login -> Server ✅
+    # - If rewrite-target was /: Client -> /api/auth/login -> Ingress forwards /auth/login -> Server ❌ (404)
 spec:
   rules:
   - host: nodereactrback8s.com  # Map this domain to ingress IP in hosts file: 165.245.144.226 nodereactrback8s.com
@@ -14,6 +20,8 @@ spec:
       paths:
       - path: /api
         pathType: Prefix
+        # This path forwards all /api/* requests to server-service
+        # The full path (e.g., /api/auth/login) is forwarded unchanged to the server
         backend:
           service:
             name: server-service
