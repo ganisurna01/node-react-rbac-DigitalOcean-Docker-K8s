@@ -35,7 +35,31 @@ kubectl scale deployment server client -n node-react-rbac --replicas=0
 
 ## ✅ Start Pods Again (Scale Back Up)
 
-When you want to resume your application:
+### **Option 1: Automatic Restart (CI/CD) - Recommended**
+
+**Pods will automatically restart when you push code!** 🚀
+
+When you push code to the `main` branch:
+- The GitHub Actions workflow runs `kubectl apply` on your deployment files
+- The deployment YAML files specify `replicas: 2`
+- Kubernetes automatically scales the deployments back up to 2 replicas
+- **No manual intervention needed!**
+
+```bash
+# Just push your code
+git add .
+git commit -m "Update application"
+git push origin main
+
+# The CI/CD pipeline will automatically:
+# 1. Build new images
+# 2. Deploy to Kubernetes
+# 3. Scale pods back up to 2 replicas (from 0)
+```
+
+### **Option 2: Manual Start (If Needed)**
+
+If you want to start pods manually without pushing code:
 
 ```bash
 # Start server pods (scale back to 2 replicas)
@@ -85,7 +109,8 @@ kubectl get all -n node-react-rbac
 
 - **Stopping = Scaling to 0 replicas** - Everything stays, just no pods running
 - **No data loss** - All configurations are preserved
-- **Quick to restart** - Just scale back up
+- **Automatic restart on push** - CI/CD will scale pods back up when you deploy
+- **Manual restart available** - You can also scale up manually if needed
 - **Useful for:** Pausing during maintenance, saving resources, testing
 
 ---
